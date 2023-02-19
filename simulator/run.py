@@ -6,6 +6,9 @@ from game import game_engine
 from simple_snake import simple_snake
 from time import perf_counter
 from matplotlib.colors import LinearSegmentedColormap
+import os
+import glob
+
 
 rules = {'starting_length': 3, # for constrictor, just set this to something huge.
          'game_mode': 'duel', # or 'solo'
@@ -36,7 +39,9 @@ my_example_board_state = {'height': 15, 'width': 15,
 my_game_engine = game_engine()
 my_game_engine.initialize(board = (11,11),
                           snakes = [simple_snake('tom'),
-                                    simple_snake('molly')
+                                    simple_snake('molly'),
+                                    simple_snake('jerry'),
+                                    simple_snake('sally')
                                     ],
                           rules = rules)
 
@@ -125,7 +130,7 @@ def plot_match(game_history, save_folder):
         
 # actually call this function
 plot_match(game_history = my_game_engine.history,
-           save_folder = '../saved/test_game1/{}')
+           save_folder = './saved/test_game1/')
 
 ''' make gif from a folder '''
 import imageio
@@ -149,6 +154,9 @@ def make_gif(folder, save_path):
     # convert list of stills into a gif
     imageio.mimsave(save_path, stills_list, duration=0.1)
     print('gif saved')
+    files = glob('./saved/test_game1/*.png')
+    for f in files:
+        os.remove(f)
 
-make_gif(folder='../saved/test_game1/',
-        save_path = '../gifs/match.gif')
+make_gif(folder='./saved/test_game1/',
+        save_path = './gifs/match.gif')
