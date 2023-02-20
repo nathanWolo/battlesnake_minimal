@@ -102,11 +102,12 @@ class game_engine():
         return reduced_board_state
     
     def _move_target(self, current_pos: dict, move_dir: int) -> dict:
-        if move_dir == 0: current_pos['y'] += 1 # up
-        if move_dir == 1: current_pos['y'] -= 1 # down
-        if move_dir == 2: current_pos['x'] -= 1 # left
-        if move_dir == 3: current_pos['x'] += 1 # right
-        return current_pos
+        new_pos = copy.deepcopy(current_pos)
+        if move_dir == 0: new_pos['y'] += 1 # up
+        if move_dir == 1: new_pos['y'] -= 1 # down
+        if move_dir == 2: new_pos['x'] -= 1 # left
+        if move_dir == 3: new_pos['x'] += 1 # right
+        return new_pos
         
     def step(self) -> str: # returns either 'running' or 'complete'
         
@@ -131,6 +132,24 @@ class game_engine():
                         self.board_state['snakes'].remove(_snake)
                         print(_snake['name'],'went out of bounds')
 
+        # ------------ remove tail ---------------
+        # is snake eating?
+        eating_snakes = list()
+        
+        for _snake in self.board_state['snakes']:
+            for _food in self.board_state['food']:
+                if _snake['desired'] == _food: # comparing dictionaries
+                    eating_snakes.append(_snake['name'])
+                    self.board_state['food'].remove(_food)
+
+        # shrink snake (via aging body segments)
+        for _snake in self.board_state['snakes']:
+            # append body
+            if _snake['name'] not in eating_snakes:
+                _snake['body'].pop()
+            else:
+                _snake['health'] = 100 # eating!
+                _snake['length'] += 1
 
         # ----------------- face-off -----------------
         pseudo_dead_snakes = list()
@@ -151,24 +170,24 @@ class game_engine():
                     self.board_state['snakes'].remove(_snake)
                     print(_snake['name'],'faced off and lost')
 
-        # ------------ remove tail ---------------
-        # is snake eating?
-        eating_snakes = list()
+        # # ------------ remove tail ---------------
+        # # is snake eating?
+        # eating_snakes = list()
         
-        for _snake in self.board_state['snakes']:
-            for _food in self.board_state['food']:
-                if _snake['desired'] == _food: # comparing dictionaries
-                    eating_snakes.append(_snake['name'])
-                    self.board_state['food'].remove(_food)
+        # for _snake in self.board_state['snakes']:
+        #     for _food in self.board_state['food']:
+        #         if _snake['desired'] == _food: # comparing dictionaries
+        #             eating_snakes.append(_snake['name'])
+        #             self.board_state['food'].remove(_food)
 
-        # shrink snake (via aging body segments)
-        for _snake in self.board_state['snakes']:
-            # append body
-            if _snake['name'] not in eating_snakes:
-                _snake['body'].pop()
-            else:
-                _snake['health'] = 100 # eating!
-                _snake['length'] += 1
+        # # shrink snake (via aging body segments)
+        # for _snake in self.board_state['snakes']:
+        #     # append body
+        #     if _snake['name'] not in eating_snakes:
+        #         _snake['body'].pop()
+        #     else:
+        #         _snake['health'] = 100 # eating!
+        #         _snake['length'] += 1
                 
         # ---------------- obstacle array -----------------
         # note: out of bounds is covered above
@@ -252,3 +271,86 @@ class game_engine():
                 return 'complete'
 
             else: return 'running'
+
+    '''Inputs:
+    state: a dictionary containing the current state of the game
+    snake: which snake is taking the action
+    action: the action a snake takes from this state
+    
+    Outputs:
+    A dictionary containing:
+    The resulting state after the action is taken '''
+    def mcts_sim_step(self, state, snake, action) -> dict:
+        _new_state = copy.deepcopy(state)
+        _snake_index = 0
+        dead = False
+        for i in range(len(_new_state['snakes'])):
+            if _new_state['snakes'][i]['name'] == snake:
+                _snake_index = i
+        # move head in accordance with action
+        _new_state['snakes'][_snake_index]['desired'] = self._move_target(_new_state['snakes'][_snake_index]['head'], action)
+
+        # check if the move kills you by going out of bounds
+        if _new_state['snakes'][_snake_index]['desired']['x'] > self.width or _new_state['snakes'][_snake_index]['desired']['x'] < 0 \
+        or _new_state['snakes'][_snake_index]['desired']['y'] > self.height or _new_state['snakes'][_snake_index]['desired']['y'] < 0:
+            _new_state['snakes'].pop(_snake_index)
+            #print("SIMULATOR: Snake ",snake," died by going out of bounds")
+            dead = True
+        
+        #check if you got food
+        eating = False
+        if not dead:
+            for _food in _new_state['food']:
+                if _new_state['snakes'][_snake_index]['desired'] == _food:
+                    eating = True
+                    _new_state['food'].remove(_food)
+                    _new_state['snakes'][_snake_index]['health'] = 100
+            if not eating:
+                _new_state['snakes'][_snake_index]['body'].pop(-1)
+                _new_state['snakes'][_snake_index]['health'] -= 1
+        # check if you collided with another snake
+        # Since we are making the game sequential for the sake of MCTS, we can't move up the other snakes tail
+        # Since we don't know if its getting food this turn
+        # So we just assume it is getting food and that the tail will stay for the sake of simulating collisions
+        # This kind of sucks and is a TODO to get a workaround
+        if not dead:
+            for _other_snake in _new_state['snakes']:
+                if _new_state['snakes'][_snake_index]['desired'] in _other_snake['body']:
+                    #print("other snakes", _other_snake['name'], "body: ", _other_snake['body'])
+                    #print("SIMULATOR: Snake ",snake," died by colliding with another snake: ", _other_snake['name'], "at ", _new_state['snakes'][_snake_index]['desired'])
+                    _new_state['snakes'].pop(_snake_index)
+                    dead = True
+
+
+        # starve
+        if not dead:
+            if _new_state['snakes'][_snake_index]['health'] <= 0:
+                _new_state['snakes'].pop(_snake_index)
+                #print("SIMULATOR: Snake ",snake," died by starving")
+                dead = True
+        #move head
+        if not dead:
+            #print("SIMULATOR: Snake ", snake, " body: ", _new_state['snakes'][_snake_index]['body'], " desired: ", _new_state['snakes'][_snake_index]['desired'], " eating: ", eating, "")
+            #print("SIMULATOR: Snake ", snake, " body: ", _new_state['snakes'][_snake_index]['body'], " desired: ", _new_state['snakes'][_snake_index]['desired'], " eating: ", eating)
+            _new_state['snakes'][_snake_index]['body'].insert(0,_new_state['snakes'][_snake_index]['desired'])
+            _new_state['snakes'][_snake_index]['head'] = _new_state['snakes'][_snake_index]['desired']
+            #print("SIMULATOR: Snake ", snake, " body: ", _new_state['snakes'][_snake_index]['body'], " desired: ", _new_state['snakes'][_snake_index]['desired'], " eating: ", eating)
+        #return resulting state
+        return _new_state
+
+    def mcts_get_safe_moves(self, state, snake) -> list:
+        moves = [0,1,2,3]
+        safe_moves = []
+        _snake_index = 0
+        for i in range(len(state['snakes'])):
+            if state['snakes'][i]['name'] == snake:
+                _snake_index = i
+        for move in moves:
+            _new_state = self.mcts_sim_step(state, snake, move)
+            print(move, _new_state['snakes'])
+            if state['snakes'][_snake_index]['name'] not in [x['name'] for x in _new_state['snakes']]:
+                print(move, " is not safe")
+                continue
+            safe_moves.append(move)
+            print("safe moves: ", safe_moves)
+        return safe_moves

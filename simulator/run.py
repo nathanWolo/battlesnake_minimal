@@ -20,15 +20,15 @@ rules = {'starting_length': 3, # for constrictor, just set this to something hug
 my_example_board_state = {'height': 15, 'width': 15,
  'snakes': [{'name': 'tom', 'health': 100,
              'head': {'x': 1, 'y': 0},
-             'body': [{'x': 1, 'y': 1},
+             'body': [{'x': 1, 'y': 0},
                       {'x': 1, 'y': 1},
                       {'x': 1, 'y': 1}],
              'length': 3},
             {'name': 'molly', 'health': 100,
-             'head': {'x': 1, 'y': 14},
-             'body': [{'x': 1, 'y': 14},
-                      {'x': 1, 'y': 14},
-                      {'x': 1, 'y': 14}],
+             'head': {'x': 1, 'y': 8},
+             'body': [{'x': 1, 'y': 8},
+                      {'x': 1, 'y': 7},
+                      {'x': 1, 'y': 7}],
              'length': 3}],
  'food': [{'x': 0, 'y': 0},
           {'x': 2, 'y': 2},
@@ -39,9 +39,7 @@ my_example_board_state = {'height': 15, 'width': 15,
 my_game_engine = game_engine()
 my_game_engine.initialize(board = (11,11),
                           snakes = [simple_snake('tom'),
-                                    simple_snake('molly'),
-                                    simple_snake('jerry'),
-                                    simple_snake('sally')
+                                    simple_snake('molly')
                                     ],
                           rules = rules)
 
