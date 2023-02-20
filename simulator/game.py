@@ -289,10 +289,10 @@ class game_engine():
                 _snake_index = i
         # move head in accordance with action
         _new_state['snakes'][_snake_index]['desired'] = self._move_target(_new_state['snakes'][_snake_index]['head'], action)
-
+        #print(_new_state)
         # check if the move kills you by going out of bounds
-        if _new_state['snakes'][_snake_index]['desired']['x'] > self.width or _new_state['snakes'][_snake_index]['desired']['x'] < 0 \
-        or _new_state['snakes'][_snake_index]['desired']['y'] > self.height or _new_state['snakes'][_snake_index]['desired']['y'] < 0:
+        if _new_state['snakes'][_snake_index]['desired']['x'] > _new_state['width'] or _new_state['snakes'][_snake_index]['desired']['x'] < 0 \
+        or _new_state['snakes'][_snake_index]['desired']['y'] > _new_state['height'] or _new_state['snakes'][_snake_index]['desired']['y'] < 0:
             _new_state['snakes'].pop(_snake_index)
             #print("SIMULATOR: Snake ",snake," died by going out of bounds")
             dead = True
@@ -347,10 +347,10 @@ class game_engine():
                 _snake_index = i
         for move in moves:
             _new_state = self.mcts_sim_step(state, snake, move)
-            print(move, _new_state['snakes'])
+           # print(move, _new_state['snakes'])
             if state['snakes'][_snake_index]['name'] not in [x['name'] for x in _new_state['snakes']]:
-                print(move, " is not safe")
+                #print(move, " is not safe")
                 continue
             safe_moves.append(move)
-            print("safe moves: ", safe_moves)
+           # print("safe moves: ", safe_moves)
         return safe_moves

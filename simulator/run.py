@@ -8,8 +8,9 @@ from time import perf_counter
 from matplotlib.colors import LinearSegmentedColormap
 import os
 import glob
-
-
+from mcts_snake import mcts_snake
+import imageio
+from glob import glob
 rules = {'starting_length': 3, # for constrictor, just set this to something huge.
          'game_mode': 'duel', # or 'solo'
          'food_max': 20, # 
@@ -37,25 +38,35 @@ my_example_board_state = {'height': 15, 'width': 15,
           {'x': 5, 'y': 5}]}
 
 my_game_engine = game_engine()
-my_game_engine.initialize(board = (11,11),
-                          snakes = [simple_snake('tom'),
-                                    simple_snake('molly')
-                                    ],
-                          rules = rules)
 
 
 start_time = perf_counter()
-game_state = 'running'
-n_turns = 0
-#np.random.seed(17) # fixes the randomness for repeatability (for now)
+molly_wins = 0
+for _ in range(20):
+    game_state = 'running'
+    my_game_engine.initialize(board = (11,11),
+                          snakes = [simple_snake('tom'),
+                                    mcts_snake('molly', num_simulations=10)
+                                    ],
+                          rules = rules)
+    n_turns = 0
+    #np.random.seed(17) # fixes the randomness for repeatability (for now)
 
-while (game_state == 'running'): # should take less than a couple seconds on a slow computer
-    game_state = my_game_engine.step()
-    n_turns+=1
-    
+    while (game_state == 'running'): # should take less than a couple seconds on a slow computer
+        game_state = my_game_engine.step()
+        n_turns+=1
+        snakes = my_game_engine.board_state['snakes']
+        #print(snakes[0]['name'])
+    try:
+        winner = snakes[0]['name']
+        if winner == 'molly':
+            molly_wins += 1
+    except(IndexError):
+        winner = 'draw'
+    print(f'winner: {winner}, n turns {n_turns}')
 end_time = perf_counter()
 elapsed_time = end_time-start_time
-print(f'time: {elapsed_time:.4}s, n turns {n_turns},\n     ({n_turns/elapsed_time:.3f} tps, {elapsed_time/n_turns:.3f} spt)')
+print(f'time: {elapsed_time:.4}s, monte carlo wins {molly_wins}\n     ({n_turns/elapsed_time:.3f} tps, {elapsed_time/n_turns:.3f} spt)')
 
 ''' plot the match (if you want) '''
 
@@ -131,8 +142,6 @@ plot_match(game_history = my_game_engine.history,
            save_folder = './saved/test_game1/')
 
 ''' make gif from a folder '''
-import imageio
-from glob import glob
 
 def make_gif(folder, save_path): 
     # load all .pngs in that folder as still images, then slap them together.
